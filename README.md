@@ -1,5 +1,5 @@
 # crypto-data-project
-Create new Data project 
+
 
 Step 1: Настройка окружения 🔧
 * Создать структуру папок проекта
