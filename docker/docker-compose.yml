@@ -1,0 +1,129 @@
+version: '3.8'
+
+services:
+  # MinIO - S3-compatible storage
+  minio:
+    image: minio/minio:latest
+    container_name: crypto_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    ports:
+      - "9000:9000"   # API port
+      - "9001:9001"   # Console port
+    volumes:
+      - ./minio/data:/data
+      - ./minio/config:/root/.minio
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - crypto_network
+
+  # PostgreSQL - Transactional database
+  postgres:
+    image: postgres:15-alpine
+    container_name: crypto_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-crypto_db}
+      POSTGRES_USER: ${POSTGRES_USER:-crypto_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crypto_pass123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crypto_user} -d ${POSTGRES_DB:-crypto_db}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - crypto_network
+
+  # Metabase - BI Visualization
+  metabase:
+    image: metabase/metabase:latest
+    container_name: crypto_metabase
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: ${POSTGRES_DB:-crypto_db}
+      MB_DB_HOST: postgres
+      MB_DB_PORT: 5432
+      MB_DB_USER: ${POSTGRES_USER:-crypto_user}
+      MB_DB_PASS: ${POSTGRES_PASSWORD:-crypto_pass123}
+      MB_EMAIL_SMTP_HOST: ${SMTP_HOST:-}
+      MB_EMAIL_SMTP_PORT: ${SMTP_PORT:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - crypto_network
+
+  # MinIO Client - для автоматической настройки bucket'ов
+  mc:
+    image: minio/mc:latest
+    container_name: crypto_mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123};
+      mc mb myminio/crypto-raw --ignore-existing;
+      mc mb myminio/crypto-processed --ignore-existing;
+      mc anonymous set private myminio/crypto-raw;
+      mc anonymous set private myminio/crypto-processed;
+      echo 'Buckets created successfully';
+      exit 0;
+      "
+    networks:
+      - crypto_network
+
+  # Python Scheduler - для запуска ETL задач
+
+  python-scheduler:
+    build:
+      context: ../ingestion
+      dockerfile: Dockerfile
+    container_name: crypto_python_scheduler
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: crypto-raw
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-crypto_db}
+      POSTGRES_USER: ${POSTGRES_USER:-crypto_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crypto_pass123}
+    volumes:
+      - ../ingestion/src:/app
+      - ../data:/data
+    depends_on:
+      minio:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - crypto_network
+    
+
+networks:
+  crypto_network:
+    driver: bridge
+
+volumes:
+  minio_data:
+  postgres_data:
