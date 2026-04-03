@@ -1,0 +1,4 @@
+id,symbol,name,current_price,market_cap,market_cap_rank,price_change_percentage_24h,performance_category,size_category,last_updated
+bitcoin,btc,Bitcoin,65000.00,1200000000000,1,2.5,POSITIVE,Blue Chip,2026-04-03 11:52:24.350078+00
+ethereum,eth,Ethereum,3500.00,420000000000,2,1.8,POSITIVE,Blue Chip,2026-04-03 11:52:24.350078+00
+cardano,ada,Cardano,0.50,18000000000,8,-1.2,NEGATIVE,Large Cap,2026-04-03 11:52:24.350078+00

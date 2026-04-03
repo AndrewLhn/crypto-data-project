@@ -9,10 +9,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first (для кэширования)
-COPY requirements.txt .
-
 # Install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Create src directory
@@ -21,5 +19,8 @@ RUN mkdir -p /app/src
 # Copy source code
 COPY src/ /app/src/
 
-# Keep container running
-CMD ["python", "-c", "import time; print('Scheduler container ready'); while True: time.sleep(3600)"]
+# Set Python path
+ENV PYTHONPATH=/app/src
+
+# Run scheduler
+CMD ["python", "/app/src/scheduler.py"]

@@ -1,0 +1,8 @@
+# PostgreSQL credentials
+postgres_user     = "crypto_user"
+postgres_password = "your_secure_password_here"
+postgres_db       = "crypto_db"
+
+# MinIO credentials
+minio_user     = "minioadmin"
+minio_password = "your_secure_minio_password_here"
