@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: stg_crypto_markets
+    description: "Staging table for cryptocurrency market data"
+    columns:
+      - name: id
+        description: "Unique identifier for the cryptocurrency"
+        tests:
+          - unique
+          - not_null
+      - name: current_price
+        description: "Current price in USD"
+        tests:
+          - not_null
+      - name: market_cap
+        description: "Market capitalization in USD"
+      - name: price_change_percentage_24h
+        description: "Price change percentage in the last 24 hours"
+
+  - name: dim_crypto_coins
+    description: "Dimension table for cryptocurrency coins"
+    columns:
+      - name: coin_id
+        description: "Unique coin identifier"
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_crypto_prices
+    description: "Fact table for cryptocurrency prices over time"
+    columns:
+      - name: id
+        description: "Coin identifier"
+      - name: last_updated
+        description: "Timestamp when the price was last updated"
+        tests:
+          - not_null
