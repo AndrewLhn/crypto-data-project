@@ -1,17 +1,35 @@
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: crypto_postgres
+    environment:
+      POSTGRES_DB: crypto_db
+      POSTGRES_USER: crypto_user
+      POSTGRES_PASSWORD: crypto_pass123
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crypto_user -d crypto_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - crypto_network
+
   minio:
     image: minio/minio:latest
     container_name: crypto_minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
     ports:
       - "9000:9000"
       - "9001:9001"
     volumes:
       - ./minio/data:/data
-      - ./minio/config:/root/.minio
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -20,41 +38,45 @@ services:
     networks:
       - crypto_network
 
-  postgres:
-    image: postgres:15-alpine
-    container_name: crypto_postgres
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-crypto_db}
-      POSTGRES_USER: ${POSTGRES_USER:-crypto_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crypto_pass123}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./postgres/data:/var/lib/postgresql/data
-      - ./postgres/init:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crypto_user} -d ${POSTGRES_DB:-crypto_db}"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - crypto_network
-
   metabase:
     image: metabase/metabase:latest
     container_name: crypto_metabase
     environment:
       MB_DB_TYPE: postgres
-      MB_DB_DBNAME: ${POSTGRES_DB:-crypto_db}
+      MB_DB_DBNAME: crypto_db
       MB_DB_HOST: postgres
       MB_DB_PORT: 5432
-      MB_DB_USER: ${POSTGRES_USER:-crypto_user}
-      MB_DB_PASS: ${POSTGRES_PASSWORD:-crypto_pass123}
+      MB_DB_USER: crypto_user
+      MB_DB_PASS: crypto_pass123
     ports:
       - "3000:3000"
     depends_on:
       postgres:
+        condition: service_healthy
+    networks:
+      - crypto_network
+
+  python-scheduler:
+    build:
+      context: ../ingestion
+      dockerfile: Dockerfile
+    container_name: crypto_python_scheduler
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: crypto_db
+      POSTGRES_USER: crypto_user
+      POSTGRES_PASSWORD: crypto_pass123
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET: crypto-raw
+    volumes:
+      - ../ingestion/src:/app/src
+      - ../data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     networks:
       - crypto_network
@@ -68,7 +90,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       sleep 5;
-      mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123};
+      mc alias set myminio http://minio:9000 minioadmin minioadmin123;
       mc mb myminio/crypto-raw --ignore-existing;
       mc mb myminio/crypto-processed --ignore-existing;
       mc anonymous set private myminio/crypto-raw;
