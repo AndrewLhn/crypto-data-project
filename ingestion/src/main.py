@@ -6,7 +6,7 @@ from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential
 from sqlalchemy import create_engine
 
-# Configuration
+
 POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'postgres')
 POSTGRES_DB = os.getenv('POSTGRES_DB', 'crypto_db')
 POSTGRES_USER = os.getenv('POSTGRES_USER', 'crypto_user')
@@ -39,7 +39,7 @@ def save_to_postgres(df):
         conn_string = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:5432/{POSTGRES_DB}"
         engine = create_engine(conn_string)
         
-        # Save to staging table
+        
         df.to_sql('stg_crypto_markets', engine, schema='crypto_dbt', 
                   if_exists='replace', index=False)
         
@@ -54,30 +54,30 @@ def main():
     try:
         logger.info("Starting ETL pipeline...")
         
-        # Fetch data
+       
         raw_data = fetch_crypto_data()
         
-        # Convert to DataFrame
+        
         df = pd.DataFrame(raw_data)
         
-        # Select and rename columns
+       
         columns = ['id', 'symbol', 'name', 'current_price', 'market_cap',
                    'market_cap_rank', 'price_change_percentage_24h',
                    'total_volume', 'high_24h', 'low_24h', 'last_updated']
         df = df[columns]
         
-        # Add metadata
+        
         df['_loaded_at'] = datetime.utcnow().isoformat()
         df['_etl_id'] = df['id'] + '_' + df['_loaded_at']
         df['last_updated'] = pd.to_datetime(df['last_updated'])
         
         logger.info(f"Transformed {len(df)} records")
         
-        # Save to PostgreSQL
+        
         if save_to_postgres(df):
             logger.success(f"ETL completed! {len(df)} records saved to PostgreSQL")
             
-            # Print summary
+            
             print("\n" + "="*50)
             print(f"📊 Data Summary:")
             print(f"   Total records: {len(df)}")

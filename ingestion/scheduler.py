@@ -15,10 +15,10 @@ def run_etl():
 if __name__ == "__main__":
     logger.info("Scheduler started")
     
-    # Run once at start
+
     run_etl()
     
-    # Keep container alive
+    
     while True:
         time.sleep(3600)  # Sleep for 1 hour
         run_etl()

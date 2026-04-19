@@ -1,4 +1,4 @@
--- Market Overview Dashboard
+
 SELECT 
     'Total Market Cap' as metric,
     CONCAT('$', ROUND(SUM(market_cap)::numeric / 1000000000, 2), 'B') as value

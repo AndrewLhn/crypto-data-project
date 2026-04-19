@@ -8,7 +8,7 @@ from datetime import datetime
 import psycopg2
 import json
 
-# Configuration
+
 SMTP_HOST = os.getenv('SMTP_HOST', 'smtp.gmail.com')
 SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
 SMTP_USER = os.getenv('SMTP_USER', '')
@@ -26,7 +26,7 @@ def check_anomalies():
     )
     cur = conn.cursor()
     
-    # Check for price changes > 20%
+   
     cur.execute("""
         SELECT name, current_price, price_change_percentage_24h
         FROM crypto_dbt.mart_crypto_metrics

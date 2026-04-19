@@ -1,4 +1,4 @@
--- Top Gainers & Losers
+
 SELECT 
     'Top Gainer' as type,
     name,

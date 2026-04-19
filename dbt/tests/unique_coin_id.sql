@@ -1,4 +1,4 @@
--- Проверка уникальности ID
+
 SELECT 
     id, 
     COUNT(*) as duplicate_count

@@ -5,8 +5,7 @@
 ) }}
 
 WITH source AS (
-    -- Здесь мы будем читать данные из MinIO через external table
-    -- Пока создаем заглушку, позже подключим через MinIO
+
     SELECT 
         '{{ run_started_at.strftime("%Y%m%d_%H%M%S") }}' as _loaded_at,
         'staging' as _source
