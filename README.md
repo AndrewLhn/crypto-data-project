@@ -101,7 +101,7 @@ crontab -l | grep crypto
 # Edit cron jobs
 crontab -e
 
-###dbt Documentation
+###dbt Doc
 
 # Generate documentation
 ./dbt-run.sh docs generate
